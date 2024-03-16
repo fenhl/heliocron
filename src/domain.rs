@@ -1,7 +1,7 @@
 use std::fmt;
 use std::ops::RangeInclusive;
 
-use chrono::{DateTime, Duration, FixedOffset, NaiveTime};
+use chrono::{DateTime, FixedOffset, NaiveTime};
 use serde::Serialize;
 
 /// An enumeration of the different parts of the day. Not all of them necessarily occur during a
@@ -52,11 +52,6 @@ impl fmt::Display for DayPart {
 pub enum Action {
     Report {
         json: bool,
-    },
-    Wait {
-        event: Event,
-        offset: Duration,
-        run_missed_task: bool,
     },
     Poll {
         watch: bool,

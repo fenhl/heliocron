@@ -1,10 +1,10 @@
 use std::io::Write;
 use std::result;
 
-use chrono::{Duration, Local};
+use chrono::Local;
 use crossterm::{cursor, terminal, ExecutableCommand, QueueableCommand};
 
-use super::{calc, domain, errors, report, utils};
+use super::{calc, errors, report};
 
 type Result<T> = result::Result<T, errors::HeliocronError>;
 
@@ -17,44 +17,6 @@ pub fn display_report(solar_calculations: calc::SolarCalculations, json: bool) -
     };
     println!("{}", output);
     Ok(())
-}
-
-pub async fn wait(
-    event: domain::Event,
-    offset: Duration,
-    solar_calculations: calc::SolarCalculations,
-    run_missed_task: bool,
-) -> Result<()> {
-    let event_time = solar_calculations.event_time(event);
-
-    match event_time.0 {
-        Some(datetime) => {
-            let wait_until = datetime + offset;
-            utils::wait(wait_until).await?;
-
-            // If the device running heliocron is asleep for whetever reason, it is possible that this future
-            // will return after `wait_until`. As such, we need to handle whether to run or skip the task
-            // if the event was missed. We allow a default tolerance of 30s, which should be more than enough to
-            // catch any scheduling delays that could cause a second or two's delay. At some point, this arbitrary
-            // number could be made configurable, if desired.
-            if run_missed_task {
-                Ok(())
-            } else {
-                let now = chrono::Utc::now().with_timezone(wait_until.offset());
-                let missed_by = (now - wait_until).num_seconds();
-                if missed_by > 30 {
-                    Err(errors::HeliocronError::Runtime(
-                        errors::RuntimeErrorKind::EventMissed(missed_by),
-                    ))
-                } else {
-                    Ok(())
-                }
-            }
-        }
-        None => Err(errors::HeliocronError::Runtime(
-            errors::RuntimeErrorKind::NonOccurringEvent,
-        )),
-    }
 }
 
 pub fn poll(solar_calculations: calc::SolarCalculations, watch: bool, json: bool) -> Result<()> {

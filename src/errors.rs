@@ -1,7 +1,6 @@
 use std::error::Error;
 
 use chrono::{self, DateTime, FixedOffset};
-use tokio_walltime;
 
 #[derive(Debug)]
 pub enum HeliocronError {
@@ -45,7 +44,6 @@ pub enum RuntimeErrorKind {
     NonOccurringEvent,
     PastEvent(DateTime<FixedOffset>),
     EventMissed(i64),
-    SleepError(tokio_walltime::Error),
 }
 
 impl std::fmt::Display for HeliocronError {
@@ -74,7 +72,6 @@ impl std::fmt::Display for HeliocronError {
                         format!("The chosen event occurred in the past: {when}. Cannot wait a negative amount of time.")
                     }
                     RuntimeErrorKind::EventMissed(by) => format!("Event missed by {}s", by),
-                    RuntimeErrorKind::SleepError(e) => e.to_string(),
                 }
             ),
         }
@@ -86,11 +83,5 @@ impl Error for HeliocronError {}
 impl From<chrono::ParseError> for HeliocronError {
     fn from(_err: chrono::ParseError) -> Self {
         HeliocronError::Config(ConfigErrorKind::ParseDate)
-    }
-}
-
-impl From<tokio_walltime::Error> for HeliocronError {
-    fn from(err: tokio_walltime::Error) -> Self {
-        HeliocronError::Runtime(RuntimeErrorKind::SleepError(err))
     }
 }

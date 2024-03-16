@@ -1,6 +1,6 @@
 use std::{fs, path::PathBuf, result};
 
-use chrono::{DateTime, Datelike, Duration, FixedOffset, Local, NaiveDate, NaiveTime, TimeZone};
+use chrono::{DateTime, Datelike, FixedOffset, Local, NaiveDate, TimeZone};
 use clap::{Parser, Subcommand};
 use serde::Deserialize;
 
@@ -48,44 +48,6 @@ pub enum Command {
         json: bool,
     },
 
-    /// Set a delay timer which will expire when the chosen event (+/- optional offset) occurs
-    Wait {
-        /// Choose an event from which to base the delay
-        #[clap(short = 'e', long = "event", value_enum)]
-        event_name: domain::RawEventName,
-
-        /// Choose a delay from your chosen event (see --event) in one of the following formats: {'HH:MM:SS' | 'HH:MM'}. The value may be prepended with '-' to make it negative.
-        /// A negative offset will set the delay to be before the event, whilst a positive offset will set the delay to be after the event
-        #[clap(
-            short = 'o',
-            long = "offset",
-            default_value = "00:00:00",
-            parse(try_from_str=parse_offset),
-            allow_hyphen_values = true,
-        )]
-        offset: Duration,
-
-        /// Set the elevation of the centre of the Sun relative to the horizon, between -90.0 and 90.0. Positive values mean that the centre of the Sun is below the horizon, whilst
-        /// negative values mean that the centre of the sun is above the horizon. This argument is ignored if not specifying a custom event
-        #[clap(
-            short = 'a',
-            long = "altitude",
-            allow_hyphen_values = true,
-            value_parser = domain::Altitude::parse,
-            required_if_eq_any = &[("event-name", "custom_am"), ("event-name", "custom_pm")]
-        )]
-        custom_altitude: Option<domain::Altitude>,
-
-        /// Add a short description to help identify the process e.g. when using htop. This parameter has no other effect on the running of the program
-        #[clap(long = "tag")]
-        tag: Option<String>,
-
-        /// Define whether the task should still be run even if the event has been missed. A tolerance of 30 seconds after the event is allowed before a task
-        /// would be skipped. Setting this flag will cause the task to run regardless of how overdue it is
-        #[clap(long = "run-missed-event")]
-        run_missed_task: bool,
-    },
-
     /// Display real time data pertaining to the Sun at the current local time
     Poll {
         /// Run the program constantly, updating the values every second
@@ -96,29 +58,6 @@ pub enum Command {
         #[clap(long = "json")]
         json: bool,
     },
-}
-
-fn parse_offset(offset: &str) -> Result<Duration, String> {
-    // offset should either be %H:%M:%S or %H:%M +/- a "-" if negative
-    let (positive, offset): (bool, &str) = match offset.chars().next() {
-        Some('-') => (false, &offset[1..]),
-        _ => (true, offset),
-    };
-
-    let pattern = if offset.len() == 5 {
-        "%H:%M"
-    } else {
-        "%H:%M:%S"
-    };
-    let offset = NaiveTime::parse_from_str(offset, pattern)
-        .map_err(|_e| "Expected an offset in the format '[-]HH:MM' or '[-]HH:MM:SS'".to_string())?;
-    let offset = offset.signed_duration_since(NaiveTime::from_hms(0, 0, 0));
-
-    if positive {
-        Ok(offset)
-    } else {
-        Ok(-offset)
-    }
 }
 
 fn parse_date(date: &str) -> Result<NaiveDate, String> {
@@ -202,41 +141,6 @@ pub fn parse_config() -> Result<Config, HeliocronError> {
 
     let action = match cli_args.subcommand {
         Command::Report { json } => domain::Action::Report { json },
-        Command::Wait {
-            event_name,
-            offset,
-            run_missed_task,
-            custom_altitude,
-            ..
-        } => {
-            let event = match event_name {
-                domain::RawEventName::Sunrise => domain::EventName::Sunrise,
-                domain::RawEventName::Sunset => domain::EventName::Sunset,
-                domain::RawEventName::CivilDawn => domain::EventName::CivilDawn,
-                domain::RawEventName::CivilDusk => domain::EventName::CivilDusk,
-                domain::RawEventName::NauticalDawn => domain::EventName::NauticalDawn,
-                domain::RawEventName::NauticalDusk => domain::EventName::NauticalDusk,
-                domain::RawEventName::AstronomicalDawn => domain::EventName::AstronomicalDawn,
-                domain::RawEventName::AstronomicalDusk => domain::EventName::AstronomicalDusk,
-                domain::RawEventName::SolarNoon => domain::EventName::SolarNoon,
-                // These two custom_altitudes are safe to unwrap because clap already validates
-                // that custom_altitude is present when the event is custom_{am | pm}.
-                domain::RawEventName::CustomAM => {
-                    domain::EventName::CustomAM(custom_altitude.unwrap())
-                }
-                domain::RawEventName::CustomPM => {
-                    domain::EventName::CustomPM(custom_altitude.unwrap())
-                }
-            };
-
-            let event = domain::Event::from_event_name(event);
-
-            domain::Action::Wait {
-                event,
-                offset,
-                run_missed_task,
-            }
-        }
         Command::Poll { watch, json } => domain::Action::Poll { watch, json },
     };
 
