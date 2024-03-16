@@ -13,26 +13,21 @@ license = "Apache-2.0 OR MIT"
 edition = "2021"
 exclude = ["assets/"]
 
+[lints.rust]
+rust_2018_idioms = "deny"
+unsafe_code = "forbid"
+unused = "deny"
+unused_crate_dependencies = "deny"
+unused_import_braces = "deny"
+unused_lifetimes = "deny"
+unused_qualifications = "deny"
+warnings = "deny"
+
 [badges]
 maintenance = { status = "actively-developed" }
 
-[features]
-integration-test = []
-
 [dependencies]
 chrono = "0.4"
-crossterm = "0.24.0"
-dirs = "4"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-clap = { version = "3", features = ["derive"] }
-tokio = { version = "1", features = ["full"] }
-toml = "0.5"
-
-[dev-dependencies]
-assert_cmd = "2"
-predicates = "2"
-pretty_assertions = "1"
 
 [profile.release]
 codegen-units = 1

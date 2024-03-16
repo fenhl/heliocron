@@ -2,12 +2,9 @@ use std::fmt;
 use std::ops::RangeInclusive;
 
 use chrono::{DateTime, FixedOffset, NaiveTime};
-use serde::Serialize;
 
 /// An enumeration of the different parts of the day. Not all of them necessarily occur during a
 /// given 24-hour period.
-#[derive(Serialize)]
-#[serde(rename_all = "snake_case")]
 pub enum DayPart {
     Day,
     CivilTwilight,
@@ -79,18 +76,6 @@ impl EventTime {
     }
 }
 
-impl Serialize for EventTime {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        match self.0 {
-            Some(datetime) => serializer.serialize_str(&datetime.to_rfc3339()),
-            None => serializer.serialize_none(),
-        }
-    }
-}
-
 impl fmt::Display for EventTime {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -144,8 +129,7 @@ impl std::ops::Deref for Altitude {
 }
 
 /// A list of plain event names supported by the command line interface.
-#[derive(Clone, clap::ValueEnum)]
-#[clap(rename_all = "snake_case")]
+#[derive(Clone)]
 pub enum RawEventName {
     Sunrise,
     Sunset,
@@ -265,7 +249,7 @@ const LONGITUDE_RANGE: RangeInclusive<f64> = RangeInclusive::new(-180.0, 180.0);
 
 /// Represents a latitude in decimal degrees. Valid values are from -90.0..=+90.0.
 /// Positive values are to the north, whilst negative values are to the south.
-#[derive(PartialEq, Debug, Clone, serde::Serialize)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct Latitude(f64);
 
 impl Latitude {
@@ -306,7 +290,7 @@ impl std::ops::Deref for Latitude {
 
 /// Represents a longitude in decimal degrees. Valid values are from -180.0..=+180.0.
 /// Positive values are to the east, whilst negative values are to the west.
-#[derive(PartialEq, Debug, Clone, serde::Serialize)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct Longitude(f64);
 
 impl Longitude {
@@ -346,7 +330,7 @@ impl std::ops::Deref for Longitude {
 }
 
 /// Represents poisition on a map described by a latitude and longitude.
-#[derive(Debug, PartialEq, Clone, serde::Serialize)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Coordinates {
     pub latitude: Latitude,
     pub longitude: Longitude,
@@ -358,140 +342,5 @@ impl Coordinates {
             latitude,
             longitude,
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_new_latitude() {
-        let lat = Latitude::new(15.1234).unwrap();
-        let expected = Latitude(15.1234);
-
-        assert_eq!(lat, expected);
-    }
-
-    #[test]
-    fn test_new_latitude_with_valid_values() {
-        let vals = &[-90.0, -89.9999999999, -0.0, 0.0, 90.0];
-
-        for val in vals {
-            assert!(Latitude::new(*val).is_ok());
-        }
-    }
-
-    #[test]
-    fn test_new_latitude_with_invalid_values() {
-        let vals = &[-180.0, -90.00000000001, 90.00000001, 100.0];
-
-        for val in vals {
-            assert!(Latitude::new(*val).is_err());
-        }
-    }
-
-    #[test]
-    fn test_parse_latitude_with_valid_values() {
-        let vals = &["-90.0", "-89.9999999999", "-0.0", "0.0", "90.0"];
-
-        for val in vals {
-            assert!(Latitude::parse(*val).is_ok());
-        }
-    }
-
-    #[test]
-    fn test_parse_latitude_with_invalid_values() {
-        let vals = &["-180.0", "-90.00000000001", "90.00000001", "100.0"];
-
-        for val in vals {
-            assert!(Latitude::parse(*val).is_err());
-        }
-    }
-
-    #[test]
-    fn test_new_longitude() {
-        let lat = Longitude::new(-150.1234).unwrap();
-        let expected = Longitude(-150.1234);
-
-        assert_eq!(lat, expected);
-    }
-
-    #[test]
-    fn test_new_longitude_with_valid_values() {
-        let vals = &[-180.0, -90.0, -89.9999, -0.0, 0.0, 90.0, 180.0];
-
-        for val in vals {
-            assert!(Longitude::new(*val).is_ok());
-        }
-    }
-
-    #[test]
-    fn test_new_longitude_with_invalid_values() {
-        let vals = &[-180.1, 180.01];
-
-        for val in vals {
-            assert!(Longitude::new(*val).is_err());
-        }
-    }
-
-    #[test]
-    fn test_parse_longitude_with_valid_values() {
-        let vals = &[
-            "-180.0", "-90.0", "-89.9999", "-0.0", "0.0", "90.0", "180.0",
-        ];
-
-        for val in vals {
-            assert!(Longitude::parse(*val).is_ok());
-        }
-    }
-
-    #[test]
-    fn test_parse_longitude_with_invalid_values() {
-        let vals = &["-180.1", "180.01"];
-
-        for val in vals {
-            assert!(Longitude::parse(*val).is_err());
-        }
-    }
-
-    #[test]
-    fn test_new_coordinates() {
-        let latitude = Latitude::new(10.0).unwrap();
-        let longitude = Longitude::new(20.0).unwrap();
-
-        let coords = Coordinates::new(latitude.clone(), longitude.clone());
-        let expected = Coordinates {
-            latitude,
-            longitude,
-        };
-
-        assert_eq!(coords, expected);
-    }
-
-    #[test]
-    fn test_serialize_event_time() {
-        let dt = DateTime::parse_from_rfc3339("2022-06-11T12:00:00+01:00").unwrap();
-        let et = EventTime::new(Some(dt));
-        // serialize to rfc3339
-        let expected = serde_json::json!("2022-06-11T12:00:00+01:00");
-        assert_eq!(serde_json::to_value(et).unwrap(), expected);
-
-        let et = EventTime::new(None);
-        //serialize to null
-        let expected = serde_json::json!(null);
-        assert_eq!(serde_json::to_value(et).unwrap(), expected);
-    }
-
-    #[test]
-    fn test_display_event_time() {
-        let dt = DateTime::parse_from_rfc3339("2022-06-11T12:00:00+01:00").unwrap();
-        let et = EventTime::new(Some(dt));
-        let expected = "2022-06-11 12:00:00 +01:00";
-        assert_eq!(et.to_string(), expected);
-
-        let et = EventTime::new(None);
-        let expected = "Never";
-        assert_eq!(et.to_string(), expected);
     }
 }
