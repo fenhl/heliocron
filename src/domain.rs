@@ -110,7 +110,7 @@ impl fmt::Display for EventTime {
 }
 
 /// Newtype wrapper for validating an altitude between -90.0 and 90.0.
-#[derive(Clone)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Altitude(f64);
 
 impl Altitude {
@@ -169,6 +169,7 @@ pub enum RawEventName {
 ///
 /// For example, CustomAM/PM here include the custom altitude, in contrast to
 /// `RawEventName` where that data is absent.
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum EventName {
     Sunrise,
     Sunset,
