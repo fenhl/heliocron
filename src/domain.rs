@@ -6,7 +6,7 @@ use serde::Serialize;
 
 /// An enumeration of the different parts of the day. Not all of them necessarily occur during a
 /// given 24-hour period.
-#[derive(Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum DayPart {
     Day,
