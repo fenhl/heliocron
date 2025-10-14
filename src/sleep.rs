@@ -78,7 +78,6 @@ unsafe fn disarm_timer(timer: libc::timer_t) -> Result<()> {
     Ok(())
 }
 
-#[cfg(unix)]
 pub async fn sleep_until<Tz: chrono::TimeZone>(time: DateTime<Tz>) -> Result<()> {
     let time = time.with_timezone(&Utc);
     // we must schedule our signal handler before the first signal appears
